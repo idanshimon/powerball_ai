@@ -47,7 +47,10 @@ def parse_powerball_numbers(csv_content):
     # Sort the list by date
     powerball_numbers.sort(key=lambda x: x[0])
 
-    return powerball_numbers
+    # Extract sorted winning numbers
+    sorted_winning_numbers = [numbers for _, numbers in powerball_numbers]
+
+    return sorted_winning_numbers
 
 # Usage example
 csv_url = "https://data.ny.gov/api/views/d6yy-54nr/rows.csv?accessType=DOWNLOAD"
