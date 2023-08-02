@@ -19,5 +19,5 @@ This project aims to predict the next set of winning Powerball numbers using Lon
 1. Clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/your-username/powerball-prediction.git
+git clone https://github.com/idanshimon/powerball-ai.git
 cd powerball-prediction
