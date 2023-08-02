@@ -1,6 +1,6 @@
 # Powerball Number Prediction using LSTM
 
-![Powerball]([https://example.com/powerball_image.png](https://wyolotto.com/wp-content/uploads/2022/05/Powerball-Circle.png))
+![Powerball](https://wyolotto.com/wp-content/uploads/2022/05/Powerball-Circle.png])
 
 ## Overview
 
