@@ -34,3 +34,4 @@ The Powerball winning numbers are obtained from New York State's open data API. 
 ## Author Notes
 Feel free to contribute, open issues, and provide feedback to help improve the project!
 
+By Idan Shimon
