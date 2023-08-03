@@ -68,9 +68,6 @@ except Exception as e:
         raise Exception("Local file not found. Please ensure the file './powerball_db.csv' exists.")
 winning_numbers = parse_powerball_numbers(csv_content)
 
-# Print the last 20 sets of winning numbers
-pprint(winning_numbers[-20:])
-
 lottery_numbers_data = winning_numbers
 # Create a sequential model
 model = Sequential()
