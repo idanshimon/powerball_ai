@@ -72,9 +72,6 @@ winning_numbers = parse_powerball_numbers(csv_content)
 
 lottery_numbers_data = winning_numbers
 
-# Set a random seed using the current timestamp
-np.random.seed(int(time.time()))
-
 # Create a sequential model
 model = Sequential()
 model.add(LSTM(128, input_shape=(6, 1)))
@@ -83,39 +80,41 @@ model.add(Dense(6))
 # Compile the model
 model.compile(loss='mse', optimizer='adam')
 
+# Set a random seed using the current timestamp
+np.random.seed(int(time.time()))
+
 # Transform data into the correct format
 x = np.array(lottery_numbers_data)
 y = np.roll(x, -1, axis=0)
 
-# Reshape the data for the model
-x = x.reshape((-1, 6, 1))
-
-# Shuffle the training data before each epoch (Optional)
-np.random.shuffle(x)
-np.random.shuffle(y)
-
-# Train the model
-model.fit(x, y, batch_size=32, epochs=10)
+# Train the model with shuffled data before each epoch
+epochs = 10
+for epoch in range(epochs):
+    print(f"Epoch {epoch + 1}/{epochs}")
+    # Shuffle the training data before each epoch
+    indices = np.arange(len(x))
+    np.random.shuffle(indices)
+    x_shuffled = x[indices]
+    y_shuffled = y[indices]
+    model.fit(x_shuffled, y_shuffled, batch_size=32, epochs=1, verbose=1)
 
 # Generate a new sequence of 5 unique numbers between 1 and 69
 sequence = np.random.choice(range(1, 70), size=5, replace=False)
-
-# Generate the predicted sequence with probabilities
-predicted_probs = model.predict(sequence)[0]
-# Randomly sample from the predicted probabilities
-predicted_sequence = np.random.choice(range(70), size=6, p=predicted_probs)
 
 # Generate a new unique number between 1 and 26
 bonus_number = np.random.choice(range(1, 27))
 
 # Append the bonus number to the sequence
-sequence = np.append(predicted_sequence, bonus_number)
+sequence = np.append(sequence, bonus_number)
 
 # Reshape the sequence for prediction
 sequence = sequence.reshape((1, 6, 1))
 
-# Generate the predicted sequence
-predicted_sequence = np.round(model.predict(sequence)[0]).astype(int)
+# Generate the predicted sequence with probabilities
+predicted_probs = model.predict(sequence)[0]
+
+# Randomly sample from the predicted probabilities
+predicted_sequence = np.random.choice(range(1, 70), size=6, p=predicted_probs)
 
 # Check for duplicate numbers in the predicted sequence and replace them if necessary
 for i in range(len(predicted_sequence) - 1):
