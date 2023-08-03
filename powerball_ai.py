@@ -113,8 +113,15 @@ sequence = sequence.reshape((1, 6, 1))
 # Generate the predicted sequence with probabilities
 predicted_probs = model.predict(sequence)[0]
 
-# Randomly sample from the predicted probabilities
-predicted_sequence = np.random.choice(range(1, 70), size=6, p=predicted_probs)
+# Generate the cumulative sum of probabilities
+cumulative_probs = np.cumsum(predicted_probs)
+
+# Randomly sample from the cumulative probabilities
+rand_values = np.random.rand(6)
+predicted_sequence = np.searchsorted(cumulative_probs, rand_values)
+
+# Add 1 to the predicted_sequence to get the final numbers from 1 to 69
+predicted_sequence += 1
 
 # Check for duplicate numbers in the predicted sequence and replace them if necessary
 for i in range(len(predicted_sequence) - 1):
