@@ -27,7 +27,32 @@ git clone https://github.com/idanshimon/powerball_ai.git
 cd powerball_ai
 pip install -r requirements.txt
 python powerball_ai.py
+
+> python powerball_ai.py
+Epoch 1/10
+47/47 [==============================] - 2s 11ms/step - loss: 1051.7180
+Epoch 2/10
+47/47 [==============================] - 0s 10ms/step - loss: 638.7297
+Epoch 3/10
+47/47 [==============================] - 1s 11ms/step - loss: 429.2337
+Epoch 4/10
+47/47 [==============================] - 1s 11ms/step - loss: 312.5386
+Epoch 5/10
+47/47 [==============================] - 0s 11ms/step - loss: 238.4485
+Epoch 6/10
+47/47 [==============================] - 0s 10ms/step - loss: 191.6049
+Epoch 7/10
+47/47 [==============================] - 0s 10ms/step - loss: 162.0938
+Epoch 8/10
+47/47 [==============================] - 0s 10ms/step - loss: 143.5754
+Epoch 9/10
+47/47 [==============================] - 0s 10ms/step - loss: 132.3892
+Epoch 10/10
+47/47 [==============================] - 0s 10ms/step - loss: 125.7005
+1/1 [==============================] - 0s 472ms/step
+[ 7 62 18 49 66  1]
 ```
+
 
 ## Disclaimer
 This project is purely for educational and entertainment purposes. Predicting lottery numbers is improbable and not recommended as a reliable strategy for winning the lottery. The predictions made by the model are not guaranteed to be accurate, and using them to play the lottery involves risks.
