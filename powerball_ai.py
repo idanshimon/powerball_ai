@@ -7,6 +7,8 @@ import requests
 from io import StringIO
 from datetime import datetime
 import os
+import time
+
 
 def download_powerball_numbers(url):
     """
@@ -69,6 +71,10 @@ except Exception as e:
 winning_numbers = parse_powerball_numbers(csv_content)
 
 lottery_numbers_data = winning_numbers
+
+# Set a random seed using the current timestamp
+np.random.seed(int(time.time()))
+
 # Create a sequential model
 model = Sequential()
 model.add(LSTM(128, input_shape=(6, 1)))
@@ -83,6 +89,11 @@ y = np.roll(x, -1, axis=0)
 
 # Reshape the data for the model
 x = x.reshape((-1, 6, 1))
+
+# Shuffle the training data before each epoch (Optional)
+np.random.shuffle(x)
+np.random.shuffle(y)
+model.fit(x, y, batch_size=32, epochs=10)
 
 # Train the model
 model.fit(x, y, batch_size=32, epochs=10)
