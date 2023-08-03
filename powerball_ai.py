@@ -93,7 +93,6 @@ x = x.reshape((-1, 6, 1))
 # Shuffle the training data before each epoch (Optional)
 np.random.shuffle(x)
 np.random.shuffle(y)
-model.fit(x, y, batch_size=32, epochs=10)
 
 # Train the model
 model.fit(x, y, batch_size=32, epochs=10)
