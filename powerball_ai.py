@@ -100,11 +100,16 @@ model.fit(x, y, batch_size=32, epochs=10)
 # Generate a new sequence of 5 unique numbers between 1 and 69
 sequence = np.random.choice(range(1, 70), size=5, replace=False)
 
+# Generate the predicted sequence with probabilities
+predicted_probs = model.predict(sequence)[0]
+# Randomly sample from the predicted probabilities
+predicted_sequence = np.random.choice(range(70), size=6, p=predicted_probs)
+
 # Generate a new unique number between 1 and 26
 bonus_number = np.random.choice(range(1, 27))
 
 # Append the bonus number to the sequence
-sequence = np.append(sequence, bonus_number)
+sequence = np.append(predicted_sequence, bonus_number)
 
 # Reshape the sequence for prediction
 sequence = sequence.reshape((1, 6, 1))
