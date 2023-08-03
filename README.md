@@ -8,11 +8,15 @@ This project aims to predict the next set of winning Powerball numbers using Lon
 
 ## Features
 
-- Fetches the latest Powerball winning numbers from a public API
+- Fetches the latest Powerball winning numbers from a public API (goes back to 2010) or uses local database if not available
 - Sorts the winning numbers by date to train the LSTM model
 - Trains an LSTM model on the historical winning numbers to make predictions
 - Generates a new set of Powerball numbers based on the predictions
 - Replaces any duplicate numbers in the predictions to ensure a valid number set
+
+## Requirements
+
+- Python 3.9.5
 
 ## Usage
 
