@@ -54,7 +54,17 @@ def parse_powerball_numbers(csv_content):
 
 # Usage example
 csv_url = "https://data.ny.gov/api/views/d6yy-54nr/rows.csv?accessType=DOWNLOAD"
-csv_content = download_powerball_numbers(csv_url)
+try:
+    csv_content = download_powerball_numbers(csv_url)
+except Exception as e:
+    print(f"Failed to download from the URL: {e}")
+    # Use the local file if online fetch fails
+    local_file_path = "./powerball_db.csv"
+    if os.path.exists(local_file_path):
+        with open(local_file_path, 'r') as file:
+            csv_content = file.read()
+    else:
+        raise Exception("Local file not found. Please ensure the file './powerball_db.csv' exists.")
 winning_numbers = parse_powerball_numbers(csv_content)
 
 # Print the last 20 sets of winning numbers
