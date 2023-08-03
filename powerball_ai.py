@@ -6,6 +6,7 @@ from pprint import pprint
 import requests
 from io import StringIO
 from datetime import datetime
+import os
 
 def download_powerball_numbers(url):
     """
