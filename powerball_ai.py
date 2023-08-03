@@ -31,7 +31,7 @@ def parse_powerball_numbers(csv_content):
         csv_content (str): The CSV content as a string.
 
     Returns:
-        list: A list of tuples containing the draw date (datetime object) and the winning numbers (list of int).
+        list: A list of winning numbers sequence (list of int). i.e. [[1,2,3,4,5,6], ...]
     """
     powerball_numbers = []
     reader = csv.reader(StringIO(csv_content))
