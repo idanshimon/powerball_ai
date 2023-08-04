@@ -64,3 +64,11 @@ The Powerball winning numbers are obtained from New York State's open data API. 
 Feel free to contribute, open issues, and provide feedback to help improve the project!
 
 By Idan Shimon
+
+## Roadmap (Future Developments)
+- Probability map with html bar-chart output
+- Analyzed data with Ball Number | Times Drawn | % of Drawings | % of Draws | Last Drawn results.
+- Add perdict model to the bonus ball (10 epoch)
+
+Teaser
+
