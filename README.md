@@ -6,6 +6,8 @@
 
 This project aims to predict the next set of winning Powerball numbers using Long Short-Term Memory (LSTM), a type of recurrent neural network. It fetches the latest Powerball winning numbers from New York State's open data API, preprocesses the data, and trains an LSTM model to make predictions. Please note that predicting lottery numbers is highly challenging and not guaranteed to be successful.
 
+The reason LSTM was used is for demonstration purposes, to showcase the application of machine learning models on sequential data. However, when it comes to lotteries, the best strategy is to treat them as games of chance and enjoy them responsibly for entertainment purposes rather than relying on any model for predicting winning numbers.
+
 ## Features
 
 - Fetches the latest Powerball winning numbers from a public API (goes back to 2010) or uses local database if not available
