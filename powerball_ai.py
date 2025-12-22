@@ -110,18 +110,14 @@ sequence = np.append(sequence, bonus_number)
 # Reshape the sequence for prediction
 sequence = sequence.reshape((1, 6, 1))
 
-# Generate the predicted sequence with probabilities
-predicted_probs = model.predict(sequence)[0]
+# Predict the next set of numbers
+predicted_numbers = model.predict(sequence)[0]
 
-# Generate the cumulative sum of probabilities
-cumulative_probs = np.cumsum(predicted_probs)
+# Round predictions into valid lottery ranges
+main_numbers = np.clip(np.rint(predicted_numbers[:5]), 1, 69).astype(int)
+powerball_number = int(np.clip(np.rint(predicted_numbers[5]), 1, 26))
 
-# Randomly sample from the cumulative probabilities
-rand_values = np.random.rand(6)
-predicted_sequence = np.searchsorted(cumulative_probs, rand_values)
-
-# Add 1 to the predicted_sequence to get the final numbers from 1 to 69
-predicted_sequence += 1
+predicted_sequence = np.append(main_numbers, powerball_number)
 
 # Check for duplicate numbers in the predicted sequence and replace them if necessary
 for i in range(len(predicted_sequence) - 1):
