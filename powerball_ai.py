@@ -57,6 +57,7 @@ def parse_powerball_numbers(csv_content):
 
 # Usage example
 csv_url = "https://data.ny.gov/api/views/d6yy-54nr/rows.csv?accessType=DOWNLOAD"
+data_source = "online"
 try:
     csv_content = download_powerball_numbers(csv_url)
 except Exception as e:
@@ -66,11 +67,13 @@ except Exception as e:
     if os.path.exists(local_file_path):
         with open(local_file_path, 'r') as file:
             csv_content = file.read()
+        data_source = "local CSV"
     else:
         raise Exception("Local file not found. Please ensure the file './powerball_db.csv' exists.")
 winning_numbers = parse_powerball_numbers(csv_content)
 
 lottery_numbers_data = winning_numbers
+print(f"Training data source: {data_source}")
 
 # Create a sequential model
 model = Sequential()
@@ -100,6 +103,7 @@ rng = np.random.default_rng()
 
 # Generate a random valid ticket (5 unique mains, 1 powerball)
 main_numbers = rng.choice(np.arange(1, 70), size=5, replace=False)
+main_numbers = np.sort(main_numbers)
 powerball_number = rng.integers(1, 27)
 
 predicted_sequence = np.append(main_numbers, powerball_number)
