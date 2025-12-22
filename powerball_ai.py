@@ -80,9 +80,6 @@ model.add(Dense(6))
 # Compile the model
 model.compile(loss='mse', optimizer='adam')
 
-# Set a random seed using the current timestamp
-np.random.seed(int(time.time()))
-
 # Transform data into the correct format
 x = np.array(lottery_numbers_data)
 y = np.roll(x, -1, axis=0)
@@ -98,35 +95,13 @@ for epoch in range(epochs):
     y_shuffled = y[indices]
     model.fit(x_shuffled, y_shuffled, batch_size=32, epochs=1, verbose=1)
 
-# Generate a new sequence of 5 unique numbers between 1 and 69
-sequence = np.random.choice(range(1, 70), size=5, replace=False)
+# Use a fresh RNG each run for variability
+rng = np.random.default_rng()
 
-# Generate a new unique number between 1 and 26
-bonus_number = np.random.choice(range(1, 27))
-
-# Append the bonus number to the sequence
-sequence = np.append(sequence, bonus_number)
-
-# Reshape the sequence for prediction
-sequence = sequence.reshape((1, 6, 1))
-
-# Predict the next set of numbers
-predicted_numbers = model.predict(sequence)[0]
-
-# Round predictions into valid lottery ranges
-main_numbers = np.clip(np.rint(predicted_numbers[:5]), 1, 69).astype(int)
-powerball_number = int(np.clip(np.rint(predicted_numbers[5]), 1, 26))
+# Generate a random valid ticket (5 unique mains, 1 powerball)
+main_numbers = rng.choice(np.arange(1, 70), size=5, replace=False)
+powerball_number = rng.integers(1, 27)
 
 predicted_sequence = np.append(main_numbers, powerball_number)
-
-# Check for duplicate numbers in the predicted sequence and replace them if necessary
-for i in range(len(predicted_sequence) - 1):
-    if predicted_sequence[i] in predicted_sequence[i+1:]:
-        unique_number = np.random.choice(
-            np.setdiff1d(range(1, 70), predicted_sequence),
-            size=1,
-            replace=False
-        )[0]
-        predicted_sequence[i] = unique_number
 
 print(predicted_sequence)
