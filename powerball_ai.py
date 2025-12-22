@@ -57,6 +57,7 @@ def parse_powerball_numbers(csv_content):
 
 # Usage example
 csv_url = "https://data.ny.gov/api/views/d6yy-54nr/rows.csv?accessType=DOWNLOAD"
+data_source = "online"
 try:
     csv_content = download_powerball_numbers(csv_url)
 except Exception as e:
@@ -66,11 +67,22 @@ except Exception as e:
     if os.path.exists(local_file_path):
         with open(local_file_path, 'r') as file:
             csv_content = file.read()
+        data_source = "local CSV"
     else:
         raise Exception("Local file not found. Please ensure the file './powerball_db.csv' exists.")
 winning_numbers = parse_powerball_numbers(csv_content)
 
 lottery_numbers_data = winning_numbers
+print(f"Training data source: {data_source}")
+
+# Use a fresh RNG each run for variability
+rng = np.random.default_rng()
+
+# Randomly sample up to 1000 draws for training to keep variation between runs
+sample_size = min(1000, len(lottery_numbers_data))
+sample_indices = rng.choice(len(lottery_numbers_data), size=sample_size, replace=False)
+lottery_sample = np.array([lottery_numbers_data[i] for i in sample_indices])
+print(f"Training on {sample_size} random draws out of {len(lottery_numbers_data)} total")
 
 # Create a sequential model
 model = Sequential()
@@ -80,11 +92,8 @@ model.add(Dense(6))
 # Compile the model
 model.compile(loss='mse', optimizer='adam')
 
-# Set a random seed using the current timestamp
-np.random.seed(int(time.time()))
-
 # Transform data into the correct format
-x = np.array(lottery_numbers_data)
+x = lottery_sample
 y = np.roll(x, -1, axis=0)
 
 # Train the model with shuffled data before each epoch
@@ -98,39 +107,25 @@ for epoch in range(epochs):
     y_shuffled = y[indices]
     model.fit(x_shuffled, y_shuffled, batch_size=32, epochs=1, verbose=1)
 
-# Generate a new sequence of 5 unique numbers between 1 and 69
-sequence = np.random.choice(range(1, 70), size=5, replace=False)
+# Pick a random draw from the sample as the seed sequence
+seed_sequence = lottery_sample[rng.integers(0, len(lottery_sample))]
+seed_sequence = seed_sequence.reshape((1, 6, 1))
 
-# Generate a new unique number between 1 and 26
-bonus_number = np.random.choice(range(1, 27))
+# Model predicts the next set of numbers
+predicted_numbers = model.predict(seed_sequence)[0]
 
-# Append the bonus number to the sequence
-sequence = np.append(sequence, bonus_number)
+# Convert predictions to valid ranges
+main_numbers = np.clip(np.rint(predicted_numbers[:5]), 1, 69).astype(int)
+powerball_number = int(np.clip(np.rint(predicted_numbers[5]), 1, 26))
 
-# Reshape the sequence for prediction
-sequence = sequence.reshape((1, 6, 1))
+# Deduplicate mains if needed
+for i in range(len(main_numbers) - 1):
+    if main_numbers[i] in main_numbers[i+1:]:
+        replacement = rng.choice(np.setdiff1d(np.arange(1, 70), main_numbers))
+        main_numbers[i] = replacement
 
-# Generate the predicted sequence with probabilities
-predicted_probs = model.predict(sequence)[0]
-
-# Generate the cumulative sum of probabilities
-cumulative_probs = np.cumsum(predicted_probs)
-
-# Randomly sample from the cumulative probabilities
-rand_values = np.random.rand(6)
-predicted_sequence = np.searchsorted(cumulative_probs, rand_values)
-
-# Add 1 to the predicted_sequence to get the final numbers from 1 to 69
-predicted_sequence += 1
-
-# Check for duplicate numbers in the predicted sequence and replace them if necessary
-for i in range(len(predicted_sequence) - 1):
-    if predicted_sequence[i] in predicted_sequence[i+1:]:
-        unique_number = np.random.choice(
-            np.setdiff1d(range(1, 70), predicted_sequence),
-            size=1,
-            replace=False
-        )[0]
-        predicted_sequence[i] = unique_number
+# Sort the first five, keep powerball last
+main_numbers = np.sort(main_numbers)
+predicted_sequence = np.append(main_numbers, powerball_number)
 
 print(predicted_sequence)
