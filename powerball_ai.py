@@ -75,6 +75,15 @@ winning_numbers = parse_powerball_numbers(csv_content)
 lottery_numbers_data = winning_numbers
 print(f"Training data source: {data_source}")
 
+# Use a fresh RNG each run for variability
+rng = np.random.default_rng()
+
+# Randomly sample up to 1000 draws for training to keep variation between runs
+sample_size = min(1000, len(lottery_numbers_data))
+sample_indices = rng.choice(len(lottery_numbers_data), size=sample_size, replace=False)
+lottery_sample = np.array([lottery_numbers_data[i] for i in sample_indices])
+print(f"Training on {sample_size} random draws out of {len(lottery_numbers_data)} total")
+
 # Create a sequential model
 model = Sequential()
 model.add(LSTM(128, input_shape=(6, 1)))
@@ -84,7 +93,7 @@ model.add(Dense(6))
 model.compile(loss='mse', optimizer='adam')
 
 # Transform data into the correct format
-x = np.array(lottery_numbers_data)
+x = lottery_sample
 y = np.roll(x, -1, axis=0)
 
 # Train the model with shuffled data before each epoch
@@ -98,14 +107,25 @@ for epoch in range(epochs):
     y_shuffled = y[indices]
     model.fit(x_shuffled, y_shuffled, batch_size=32, epochs=1, verbose=1)
 
-# Use a fresh RNG each run for variability
-rng = np.random.default_rng()
+# Pick a random draw from the sample as the seed sequence
+seed_sequence = lottery_sample[rng.integers(0, len(lottery_sample))]
+seed_sequence = seed_sequence.reshape((1, 6, 1))
 
-# Generate a random valid ticket (5 unique mains, 1 powerball)
-main_numbers = rng.choice(np.arange(1, 70), size=5, replace=False)
+# Model predicts the next set of numbers
+predicted_numbers = model.predict(seed_sequence)[0]
+
+# Convert predictions to valid ranges
+main_numbers = np.clip(np.rint(predicted_numbers[:5]), 1, 69).astype(int)
+powerball_number = int(np.clip(np.rint(predicted_numbers[5]), 1, 26))
+
+# Deduplicate mains if needed
+for i in range(len(main_numbers) - 1):
+    if main_numbers[i] in main_numbers[i+1:]:
+        replacement = rng.choice(np.setdiff1d(np.arange(1, 70), main_numbers))
+        main_numbers[i] = replacement
+
+# Sort the first five, keep powerball last
 main_numbers = np.sort(main_numbers)
-powerball_number = rng.integers(1, 27)
-
 predicted_sequence = np.append(main_numbers, powerball_number)
 
 print(predicted_sequence)
