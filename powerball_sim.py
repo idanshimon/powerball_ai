@@ -19,6 +19,7 @@ PADDLE_SPEED = 8.0  # Radians per second
 MIX_TIME = 3.0      # Seconds to mix before drawing
 DRAW_INTERVAL = 0.5 # Seconds between draws
 OUTPUT_GIF = "powerball_simulation.gif"
+AIR_DRAG = 0.995    # Air resistance factor (1.0 = no drag)
 
 # Colors
 WHITE = (255, 255, 255)
@@ -42,20 +43,25 @@ class PowerballSim:
         self.balls = []
         self.drawn_balls = []
         self.is_red_draw = is_red_draw
+        self.pending_draw = False # Flag to open the chute
         
-        # --- Create Chamber (Circle) ---
+        # --- Create Chamber (Circle with Exit Chute) ---
         center = (WIDTH // 2, HEIGHT // 2)
         radius = 250
         num_segments = 60
-        segment_length = (2 * math.pi * radius) / num_segments
         
-        # Create static walls (leave a gap at the bottom for the "exit")
-        # Actually, for Halogen II, balls usually drop or are picked. 
-        # We'll simulate a "trap" at the bottom.
+        # Create static walls but leave a gap at the bottom
+        gap_width = BALL_RADIUS * 4.0 # Wider gap
+        gap_angle_width = math.asin((gap_width / 2) / radius) * 2
         
+        start_angle = math.pi / 2 + gap_angle_width / 2
+        end_angle = math.pi / 2 - gap_angle_width / 2 + 2 * math.pi
+        
+        # Draw the main circular wall
         for i in range(num_segments):
-            angle = (i / num_segments) * 2 * math.pi
-            next_angle = ((i + 1) / num_segments) * 2 * math.pi
+            t = i / num_segments
+            angle = start_angle + t * (end_angle - start_angle)
+            next_angle = start_angle + (i + 1) / num_segments * (end_angle - start_angle)
             
             p1 = (center[0] + radius * math.cos(angle), center[1] + radius * math.sin(angle))
             p2 = (center[0] + radius * math.cos(next_angle), center[1] + radius * math.sin(next_angle))
@@ -65,23 +71,75 @@ class PowerballSim:
             wall.friction = 0.5
             self.space.add(wall)
 
-        # --- Create Paddle (Agitator) ---
+        # Create the Exit Chute (Funnel)
+        # Add funnel walls to guide balls in
+        funnel_h = 60
+        funnel_w = 100
+        
+        chute_y_start = center[1] + radius * math.sin(start_angle)
+        chute_x_left = center[0] + radius * math.cos(start_angle)
+        chute_x_right = center[0] + radius * math.cos(end_angle)
+        
+        # Left funnel wall (sloped)
+        l1 = (chute_x_left - 20, chute_y_start - 20)
+        l2 = (chute_x_left, chute_y_start + funnel_h)
+        left_wall = pymunk.Segment(self.space.static_body, l1, l2, 5)
+        left_wall.elasticity = 0.2
+        left_wall.friction = 0.1
+        self.space.add(left_wall)
+        
+        # Right funnel wall (sloped)
+        r1 = (chute_x_right + 20, chute_y_start - 20)
+        r2 = (chute_x_right, chute_y_start + funnel_h)
+        right_wall = pymunk.Segment(self.space.static_body, r1, r2, 5)
+        right_wall.elasticity = 0.2
+        right_wall.friction = 0.1
+        self.space.add(right_wall)
+        
+        # Sensor at the bottom of the chute
+        sensor_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+        sensor_body.position = (center[0], chute_y_start + funnel_h - 10)
+        sensor_shape = pymunk.Segment(sensor_body, (-gap_width/2, 0), (gap_width/2, 0), 5)
+        sensor_shape.sensor = True
+        
+        self.space.add(sensor_body, sensor_shape)
+        self.sensor_shape = sensor_shape # Keep ref
+
+        # --- Create Paddle (Agitator with Deflectors) ---
         self.paddle_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
         self.paddle_body.position = center
         self.paddle_body.angular_velocity = PADDLE_SPEED
         
-        # Cross shape paddle
+        # Cross shape paddle with deflectors
         paddle_len = 180
-        s1 = pymunk.Segment(self.paddle_body, (-paddle_len, 0), (paddle_len, 0), 8)
-        s2 = pymunk.Segment(self.paddle_body, (0, -paddle_len), (0, paddle_len), 8)
-        s1.elasticity = 0.8
-        s2.elasticity = 0.8
-        s1.friction = 0.8
-        s2.friction = 0.8
+        thickness = 8
         
-        self.space.add(self.paddle_body, s1, s2)
+        # Main arms
+        s1 = pymunk.Segment(self.paddle_body, (-paddle_len, 0), (paddle_len, 0), thickness)
+        s2 = pymunk.Segment(self.paddle_body, (0, -paddle_len), (0, paddle_len), thickness)
         
-        # --- Create Balls ---
+        # Deflectors (Angled tips to scoop balls)
+        deflector_len = 40
+        angle_offset = math.radians(45)
+        
+        def add_deflector(x, y, angle_base):
+            dx = deflector_len * math.cos(angle_base + angle_offset)
+            dy = deflector_len * math.sin(angle_base + angle_offset)
+            return pymunk.Segment(self.paddle_body, (x, y), (x + dx, y + dy), thickness)
+
+        d1 = add_deflector(paddle_len, 0, 0)
+        d2 = add_deflector(-paddle_len, 0, math.pi)
+        d3 = add_deflector(0, paddle_len, math.pi/2)
+        d4 = add_deflector(0, -paddle_len, -math.pi/2)
+        
+        # Add body and all shapes to space
+        self.space.add(self.paddle_body)
+        for s in [s1, s2, d1, d2, d3, d4]:
+            s.elasticity = 0.8
+            s.friction = 0.8
+            self.space.add(s)
+        
+        # --- Create Balls (with Imperfections) ---
         # Grid layout for initialization to prevent overlap
         cols = 8
         start_x = center[0] - 100
@@ -95,17 +153,48 @@ class PowerballSim:
             col = i % cols
             pos = (start_x + col * (BALL_RADIUS * 2 + 2), start_y + row * (BALL_RADIUS * 2 + 2))
             
-            mass = BALL_MASS
-            moment = pymunk.moment_for_circle(mass, 0, BALL_RADIUS)
-            body = pymunk.Body(mass, moment)
+            # Manufacturing Imperfections (Chaos Theory)
+            # Vary mass and radius by +/- 2%
+            radius_var = random.gauss(BALL_RADIUS, BALL_RADIUS * 0.02)
+            mass_var = random.gauss(BALL_MASS, BALL_MASS * 0.02)
+            
+            moment = pymunk.moment_for_circle(mass_var, 0, radius_var)
+            body = pymunk.Body(mass_var, moment)
             body.position = pos
             
-            shape = pymunk.Circle(body, BALL_RADIUS)
+            shape = pymunk.Circle(body, radius_var)
             shape.elasticity = 0.9
             shape.friction = 0.4
+            shape.collision_type = 0 # Ball type
             
             self.space.add(body, shape)
             self.balls.append({"body": body, "shape": shape, "number": number, "active": True})
+
+    def check_sensor(self):
+        if not self.pending_draw: return None
+        
+        # Query the space for shapes overlapping the sensor
+        # shape_query returns a list of ShapeQueryInfo objects
+        query_info = self.space.shape_query(self.sensor_shape)
+        
+        for info in query_info:
+            shape = info.shape
+            # Find which ball this shape belongs to
+            for ball in self.balls:
+                if ball["shape"] == shape and ball["active"]:
+                    ball["active"] = False
+                    self.space.remove(ball["body"], ball["shape"])
+                    self.drawn_balls.append(ball["number"])
+                    self.pending_draw = False
+                    print(f"  -> Ball {ball['number']} detected in chute!")
+                    return ball["number"]
+        return None
+
+    def apply_air_drag(self):
+        for ball in self.balls:
+            if ball["active"]:
+                # Apply simple linear drag
+                ball["body"].velocity = ball["body"].velocity * AIR_DRAG
 
     def draw(self, message=""):
         self.surface.fill(BLACK)
@@ -163,28 +252,51 @@ class PowerballSim:
 
         # Capture frame
         # Convert Pygame surface to numpy array for imageio
+        # Only save every 3rd frame to save memory
+        if len(self.frames) % 1 == 0: # Logic handled by caller or here? 
+            # Actually, we can just skip appending.
+            # But we need a counter. Let's use a static var or just random chance?
+            # Better: use a frame counter in the class.
+            pass
+            
         view = pygame.surfarray.array3d(self.surface)
         view = view.transpose([1, 0, 2]) # Pygame is (w, h, c), imageio needs (h, w, c)
-        self.frames.append(view)
+        
+        # Simple skip logic: only keep if total frames < 500 or skip
+        if len(self.frames) < 600:
+             self.frames.append(view)
 
     def select_ball(self):
-        # In a real machine, a ball drops. Here, we'll pick a random ball 
-        # that is currently in the "lower half" of the drum (simulating gravity feed)
-        # This adds a physics bias - balls flying high won't be picked.
+        # Enable the sensor to accept a ball
+        self.pending_draw = True
         
-        candidates = []
-        center_y = HEIGHT // 2
+        # Wait for physics to push a ball into the chute
+        # We'll give it a max time to avoid infinite loops if balls get stuck
+        max_wait_frames = FPS * 2 # 2 seconds max wait (reduced from 5)
         
-        for ball in self.balls:
-            if ball["active"] and ball["body"].position.y > center_y:
-                candidates.append(ball)
-        
+        for _ in range(max_wait_frames):
+            # Check sensor manually every frame
+            caught_ball = self.check_sensor()
+            if caught_ball:
+                return caught_ball
+                
+            for _ in range(STEPS_PER_FRAME):
+                self.apply_air_drag()
+                self.space.step(1.0 / (FPS * STEPS_PER_FRAME))
+            self.draw("Waiting for ball to drop...")
+            
+        # If timeout, force pick (fallback)
+        print("  ! Timeout waiting for ball drop. Forcing selection.")
+        self.pending_draw = False
+        # Fallback logic: pick closest to chute
+        candidates = [b for b in self.balls if b["active"]]
         if candidates:
-            # Pick one from the bottom candidates
-            selected = random.choice(candidates)
+            # Sort by Y position (lowest first)
+            candidates.sort(key=lambda b: b["body"].position.y, reverse=True)
+            selected = candidates[0]
             selected["active"] = False
-            # Remove from physics space
             self.space.remove(selected["body"], selected["shape"])
+            self.drawn_balls.append(selected["number"]) # Fix: Append to list
             return selected["number"]
         return None
 
@@ -198,6 +310,7 @@ class PowerballSim:
         # Mixing Phase
         for _ in range(int(MIX_TIME * FPS)):
             for _ in range(STEPS_PER_FRAME):
+                self.apply_air_drag()
                 self.space.step(1.0 / (FPS * STEPS_PER_FRAME))
             self.draw("Mixing White Balls...")
             
@@ -206,12 +319,13 @@ class PowerballSim:
             # Mix a bit between draws
             for _ in range(int(DRAW_INTERVAL * FPS)):
                 for _ in range(STEPS_PER_FRAME):
+                    self.apply_air_drag()
                     self.space.step(1.0 / (FPS * STEPS_PER_FRAME))
                 self.draw(f"Drawing Ball {i+1}...")
             
             number = self.select_ball()
             if number:
-                self.drawn_balls.append(number)
+                # self.drawn_balls.append(number) # Already appended in callback
                 print(f"White Ball {i+1}: {number}")
                 
         white_balls_result = list(self.drawn_balls)
@@ -230,18 +344,20 @@ class PowerballSim:
         # Mixing Phase
         for _ in range(int(MIX_TIME * FPS)):
             for _ in range(STEPS_PER_FRAME):
+                self.apply_air_drag()
                 self.space.step(1.0 / (FPS * STEPS_PER_FRAME))
             self.draw("Mixing Red Ball...")
             
         # Drawing Phase (1 ball)
         for _ in range(int(DRAW_INTERVAL * FPS)):
             for _ in range(STEPS_PER_FRAME):
+                self.apply_air_drag()
                 self.space.step(1.0 / (FPS * STEPS_PER_FRAME))
             self.draw("Drawing Powerball...")
             
         number = self.select_ball()
         if number:
-            self.drawn_balls.append(number)
+            # self.drawn_balls.append(number) # Already appended in callback
             print(f"Red Ball: {number}")
 
         # Final Freeze
