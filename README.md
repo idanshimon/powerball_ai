@@ -22,6 +22,36 @@ The reason LSTM was used is for demonstration purposes, to showcase the applicat
 
 ## Usage
 
+### Update the Database
+
+To update the local powerball database with the latest data from the API:
+
+```bash
+python powerball_ai.py --update
+```
+
+This will download the latest Powerball winning numbers and save them to `powerball_db.csv`.
+
+### Predict Numbers
+
+To predict the next Powerball numbers (default action):
+
+```bash
+python powerball_ai.py
+# or explicitly
+python powerball_ai.py --predict
+```
+
+### Update and Predict
+
+You can also update the database and then make a prediction in one command:
+
+```bash
+python powerball_ai.py --update --predict
+```
+
+### Example Output
+
 1. Clone the repository to your local machine:
 
 ```bash
