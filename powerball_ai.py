@@ -9,7 +9,12 @@ from datetime import datetime
 import os
 import time
 import argparse
-
+try:
+    from analysis import analyze_history
+except ImportError:
+    # Fallback if analysis.py is not found (e.g. in different dir structure)
+    def analyze_history(*args, **kwargs):
+        print("Analysis module not found.")
 
 def download_powerball_numbers(url):
     """
@@ -197,15 +202,22 @@ def main():
                         help='Update the local powerball database with the latest data')
     parser.add_argument('--predict', action='store_true', 
                         help='Predict the next Powerball numbers (default action if no flag is provided)')
+    parser.add_argument('--analyze', action='store_true',
+                        help='Analyze the last 100 drawings for trends and statistics')
     
     args = parser.parse_args()
     
     # If no arguments provided, default to predict mode
-    if not args.update and not args.predict:
+    if not args.update and not args.predict and not args.analyze:
         args.predict = True
     
     if args.update:
         update_database()
+        if not args.predict and not args.analyze:
+            return
+
+    if args.analyze:
+        analyze_history()
         if not args.predict:
             return
     
